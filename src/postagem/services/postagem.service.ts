@@ -41,7 +41,7 @@ export class PostagemService{
     return await this.postagemRepository.save(postagem);
   }
 
-    async update(postagem: Postagem): Promise<Postagem>{
+  async update(postagem: Postagem): Promise<Postagem>{
       if(!postagem.id || postagem.id <= 0)
         throw new HttpException('O ID da postagem é invalido', HttpStatus.BAD_REQUEST);
 
