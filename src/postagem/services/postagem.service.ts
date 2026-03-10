@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Postagem } from "../entities/postagem.entity";
 import { DeleteResult, ILike, Repository } from "typeorm";
+import { TemaService } from "src/tema/services/tema.service";
 
 
 Injectable()
@@ -9,17 +10,27 @@ export class PostagemService{
   constructor(
     @InjectRepository(Postagem)
     private postagemRepository: Repository<Postagem>,
+    private readonly temaService: TemaService
   ){}
 
   async findAll(): Promise<Postagem[]>{
     //SELECT * FROM tb_postagens
-    return this.postagemRepository.find();
+    return this.postagemRepository.find({
+      relations: {
+        tema: true,
+        usuario: true
+      }
+    });
   }
 
   async findById(id: number): Promise<Postagem>{
     // SELECT * FROM tb_postagens WHERE id = ?;
     const postagem = await this.postagemRepository.findOne({
-      where:{id}
+      where:{id},
+      relations: {
+        tema: true,
+        usuario: true
+      }
   })
 
   if (!postagem)
@@ -32,11 +43,17 @@ export class PostagemService{
     return this.postagemRepository.find({
       where:{
         titulo: ILike(`%${titulo}%`)
+      },
+      relations: {
+        tema: true,
+        usuario: true
       }
     })
   }
 
   async create(postagem: Postagem): Promise<Postagem>{
+
+    await this.temaService.findById(postagem.tema.id)
     // INSERT INTO tb_postagens(titulo, texto) VALUES (?, ?);
     return await this.postagemRepository.save(postagem);
   }
@@ -45,7 +62,11 @@ export class PostagemService{
       if(!postagem.id || postagem.id <= 0)
         throw new HttpException('O ID da postagem é invalido', HttpStatus.BAD_REQUEST);
 
-      await this.findById(postagem.id)
+      // Checa se a postagem existe
+      await this.findById(postagem.id);
+
+      // Checa se o tema da postagem existe
+      await this.temaService.findById(postagem.tema.id);
 
       // UPDATE tb_postagens SET titulo = ?, texto = ?, data = CURRENT_TIMESTANP() WHERE id = ?;
       
